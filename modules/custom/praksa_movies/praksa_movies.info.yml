@@ -1,0 +1,5 @@
+name: Movies
+type: module
+description: List of movies
+package: Custom
+core: 8.x
