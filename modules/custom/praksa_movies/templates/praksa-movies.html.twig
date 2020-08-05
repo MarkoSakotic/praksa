@@ -1,5 +1,13 @@
 <h4>{{ title }}</h4>
 
-{% for article in items %}
-   {{article}}
+{% for movie in movieslist %}
+   <h5>Title: </h5>
+   {{ movie.title }}
+   <br>
+   <h5>Description: </h5
+   {{ movie.description }}
+   <br>
+   <h5>Image: </h5>
+   <!--Ovde za sliku baš nisam siguran kako treba?-->
+   <!--<img src="{ {movie.image} }" /> <br>-->
 {% endfor %}
