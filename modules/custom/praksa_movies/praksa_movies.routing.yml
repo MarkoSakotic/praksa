@@ -3,6 +3,6 @@ praksa_movies:
     path: '/movies'
     defaults:
        _controller: 'Drupal\praksa_movies\Controller\MoviesController::movies' #ovo movies je naziv metode u kontroleru
-       _title: 'Our custom Article list'
+       _title: 'Our custom movies list'
     requirements: 
         _permission: 'access content'
