@@ -1,0 +1,8 @@
+#Ovo prvo je machine name i ispod toga ide sve ostalo
+praksa_movies:
+    path: '/movies'
+    defaults:
+       _controller: 'Drupal\praksa_movies\Controller\MoviesController::movies' #ovo movies je naziv metode u kontroleru
+       _title: 'Our custom Article list'
+    requirements: 
+        _permission: 'access content'
