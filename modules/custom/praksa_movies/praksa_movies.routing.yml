@@ -6,3 +6,4 @@ praksa_movies:
        _title: 'Our custom movies list'
     requirements: 
         _permission: 'access content'
+

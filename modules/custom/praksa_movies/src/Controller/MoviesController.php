@@ -8,32 +8,40 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Entity\Query\EntityManager; 
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class MoviesController extends ControllerBase{
 
     protected $entityQuery;
     protected $entityTypeManager;
+    protected $requestStack;
 
     /*
     Konstruktor sa parametrima, pre toga kreiram protected varijable koje se odnose na te entity query, koje prosledim tu,
     DI se odnosi na te protected varijable
     */
-    public function __construct($entityQuery, $entityTypeManager) {
+    public function __construct($entityQuery, $entityTypeManager, RequestStack $requestStack) {
         $this->entityQuery = $entityQuery;
         $this->entityTypeManager = $entityTypeManager;
+        $this->requestStack = $requestStack->getCurrentRequest();
     }
 
     public static function create(ContainerInterface $container) {
         return new static(
             $container->get('entity.query'),
-            $container->get('entity_type.manager')
+            $container->get('entity_type.manager'),
+            $container->get('request_stack')
         );
     
     } 
 
     public function movies() {
         
-        $ids = $this->getMovieId();
+        $searchfield; //koristim request stack, pozivam request, dodam u konstruktor
+
+        $searchfield = !empty($this->requestStack->get('search_field')) ? $this->requestStack->get('search_field') : '';
+
+        $ids = $this->getMovieId($searchfield);
         $movieslist = $this->loadMovieList($ids);
 
         return array(
@@ -73,10 +81,22 @@ class MoviesController extends ControllerBase{
 
     }
     /*Uzimam ID filmova. Posaljem neku vrstu upita u bazu, tj entity query sa odredjenim uslovima posaljem upit u bazu*/
-    private function getMovieId() {
-        $query_result = $this->entityQuery->get('node')
-        ->condition('type', 'movies')
-        ->execute();
+    private function getMovieId($searchfield) {
+        $query_result = [];
+        
+        if(!empty($searchfield)) {
+            $query_result = $this->entityQuery->get('node')
+            ->condition('type', 'movies')
+            ->condition('title', $searchfield, 'CONTAINS')
+            ->execute();
+        }
+        else {
+            $query_result = $this->entityQuery->get('node')
+            ->condition('type', 'movies')
+            ->execute();
+        }
+
+        return $query_result;
 
     }
 
