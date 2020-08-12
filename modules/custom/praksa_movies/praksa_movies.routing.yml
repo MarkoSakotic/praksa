@@ -7,3 +7,11 @@ praksa_movies:
     requirements: 
         _permission: 'access content'
 
+praksa_movies.admin_settings:
+    path: '/moviesettings'
+    defaults:
+        _form:  '\Drupal\praksa_movies\Form\PraksaMoviesForm'
+        _title: 'Custom configuration form'
+    requirements:
+        _permission: 'administer site configuration'
+

@@ -9,28 +9,35 @@ use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Entity\Query\EntityManager; 
 use Symfony\Component\HttpFoundation\RequestStack;
+use Drupal\Core\Config\ConfigFactory;
+
 
 class MoviesController extends ControllerBase{
 
     protected $entityQuery;
     protected $entityTypeManager;
     protected $requestStack;
+    protected $configFactory;
 
     /*
     Konstruktor sa parametrima, pre toga kreiram protected varijable koje se odnose na te entity query, koje prosledim tu,
     DI se odnosi na te protected varijable
+    config_factory getujem ime polja
     */
-    public function __construct($entityQuery, $entityTypeManager, RequestStack $requestStack) {
+    public function __construct($entityQuery, $entityTypeManager, RequestStack $requestStack, ConfigFactory $config_factory) {
         $this->entityQuery = $entityQuery;
         $this->entityTypeManager = $entityTypeManager;
         $this->requestStack = $requestStack->getCurrentRequest();
+        $this->configFactory = $config_factory->get('praksa_movies.settings');
+
     }
 
     public static function create(ContainerInterface $container) {
         return new static(
             $container->get('entity.query'),
             $container->get('entity_type.manager'),
-            $container->get('request_stack')
+            $container->get('request_stack'),
+            $container->get('config.factory')
         );
     
     } 
@@ -38,6 +45,12 @@ class MoviesController extends ControllerBase{
     public function movies() {
         
         $searchfield; //koristim request stack, pozivam request, dodam u konstruktor
+        $offset;
+        $numberOfPages;
+        //$numberOfPages = $this->request->get('page'); //request na svoj page, default je page
+        $numberOfContentPerPage = $this->configFactory->get('contentPerPage');
+
+        $offset = $numberOfPages * $numberOfContentPerPage;
 
         $searchfield = !empty($this->requestStack->get('search_field')) ? $this->requestStack->get('search_field') : '';
 
@@ -73,7 +86,7 @@ class MoviesController extends ControllerBase{
             $movies[] = array(
                 'title' => $data->title->value,
                 'description' => $data->field_description->value,
-                'image' => $data->get('field_movie_image')->entity->uri->value 
+                'image' => $data->get('field_movie_image')->entity->uri->value
             );
         }
 
@@ -88,17 +101,18 @@ class MoviesController extends ControllerBase{
             $query_result = $this->entityQuery->get('node')
             ->condition('type', 'movies')
             ->condition('title', $searchfield, 'CONTAINS')
+            ->range($offset, $numberOfContentPerPage)
             ->execute();
         }
         else {
             $query_result = $this->entityQuery->get('node')
             ->condition('type', 'movies')
+            ->range($offset, $numberOfContentPerPage)
             ->execute();
         }
 
         return $query_result;
 
     }
-
 
 }
