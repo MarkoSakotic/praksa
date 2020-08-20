@@ -1,23 +1,57 @@
 <div style="text-align:center">
-<form action = '' method = "post">
+<form action = "{{ path('<current>') ~ '?filter=' ~ pager.currentFilter }}" method = "post">
 <label>Enter movie title: </label>
-<input type = "search" name = "search_field" >
+<input type = "search" name = "searchfield" >
 <button>Search</button>
 </form>
 </div>
 
+<br /> <br />
+
+<div style="text-align:center">
+<label>Choose movie genre: </label>
+</div>
+
+<br />
+
+<div class="dropdown" style="margin-left: 37em">
+  <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+   genres
+   <span class="caret"></span>
+   </button>
+   <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+      {% for item in genre %}
+         <li><a href= "{{ path('<current>') ~ '?filter=' ~ item.id }}">{{ item.name }}</a></li>
+      {% endfor %}
+   </ul>
+   {% if pager.currentFilter != 0 %}
+      <a href= "{{  path('<current>') ~ '?filter=' ~ '&page=' ~ 0  }}" class="btn btn-secondary btn-lg active" role="button" aria-pressed="true">All movies</a>
+   {% endif %}
+</div>
+
+
 <h4>{{ title }}</h4>
 
 {% for movie in movieslist %}
-   <div style="text-align:center">
+   <div style="text-align:center; margin-left: 23em; width:500px">
    <br /> <br />
    <h3>Title: </h3>
    {{ movie.title }}
    <br />
+   <h4>Genre: </h4>
+   {{ movie.genre }}
+   <br />
    <h4>Description: </h4>
    {{ movie.description }}
-   <br />
+   <br /><br />
    <!--mora biti ulr da bi se renderovalo?-->
    <img src="{{ file_url(movie.image) }}" /><br>
    </div>
 {% endfor %}
+
+<br />
+<div style="text-align:center">
+{% for page in 0..pager.total -1 %}
+   <a href= "{{ path('<current>') ~ '?filter=' ~ pager.currentFilter ~ '&page=' ~ page }}">{{ page }}</a>
+{% endfor %}
+</div>

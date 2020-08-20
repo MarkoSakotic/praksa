@@ -46,20 +46,28 @@ class MoviesController extends ControllerBase{
         
         $searchfield; //koristim request stack, pozivam request, dodam u konstruktor
         $offset;
-        $numberOfPages;
-        //$numberOfPages = $this->request->get('page'); //request na svoj page, default je page
+        $numberOfPages = $this->requestStack->get('page'); //request na svoj page, iz twiga je to page u hrefu formiras i tu uhvatis,default je page
         $numberOfContentPerPage = $this->configFactory->get('contentPerPage');
+        $currentFilter = !empty($this->requestStack->get('filter')) ? $this->requestStack->get('filter') : ''; //konkatenacija url, formiram jednu funkciju koja ce da izboriji sve filmove, tipa getmoviesId, 
+
 
         $offset = $numberOfPages * $numberOfContentPerPage;
 
-        $searchfield = !empty($this->requestStack->get('search_field')) ? $this->requestStack->get('search_field') : '';
+        $searchfield = !empty($this->requestStack->get('searchfield')) ? $this->requestStack->get('searchfield') : '';
 
-        $ids = $this->getMovieId($searchfield);
+        $ids = $this->getMovieId($searchfield, $numberOfContentPerPage, $currentFilter, $offset);
         $movieslist = $this->loadMovieList($ids);
+        $genrelist = $this->getGenres();
+        $total = $this->getTotal($searchfield, $numberOfContentPerPage, $currentFilter);
 
         return array(
             '#theme' => 'praksa_movies',
-            '#movieslist' => $movieslist
+            '#movieslist' => $movieslist,
+            '#genre' => $genrelist,
+            '#pager' => [
+                'currentFilter' => $currentFilter,
+                'total' => $total
+            ],
         );
     }
 
@@ -86,21 +94,41 @@ class MoviesController extends ControllerBase{
             $movies[] = array(
                 'title' => $data->title->value,
                 'description' => $data->field_description->value,
-                'image' => $data->get('field_movie_image')->entity->uri->value
+                'image' => $data->get('field_movie_image')->entity->uri->value,
+                'genre' => $data->get('field_movie_genre')->entity->getName()
             );
         }
 
         return $movies;
 
     }
-    /*Uzimam ID filmova. Posaljem neku vrstu upita u bazu, tj entity query sa odredjenim uslovima posaljem upit u bazu*/
-    private function getMovieId($searchfield) {
+    /*
+    Uzimam ID filmova. Posaljem neku vrstu upita u bazu,
+    tj entity query sa odredjenim uslovima posaljem upit u bazu
+    */
+    private function getMovieId($searchfield, $numberOfContentPerPage, $genre, $offset) {
+       
         $query_result = [];
         
-        if(!empty($searchfield)) {
+        if(!empty($searchfield) && !empty($genre)) {
             $query_result = $this->entityQuery->get('node')
             ->condition('type', 'movies')
             ->condition('title', $searchfield, 'CONTAINS')
+            ->condition('field_movie_genre', $genre) //da li u field genre da li postoji taj $genre
+            ->range($offset, $numberOfContentPerPage)
+            ->execute();
+        }
+        else if(!empty($searchfield) && empty($genre)) {
+            $query_result = $this->entityQuery->get('node')
+            ->condition('type', 'movies')
+            ->condition('title', $searchfield, 'CONTAINS')
+            ->range($offset, $numberOfContentPerPage)
+            ->execute();
+        }
+        else if(empty($searchfield) && !empty($genre)) {
+            $query_result = $this->entityQuery->get('node')
+            ->condition('type', 'movies')
+            ->condition('field_movie_genre', $genre)
             ->range($offset, $numberOfContentPerPage)
             ->execute();
         }
@@ -112,6 +140,72 @@ class MoviesController extends ControllerBase{
         }
 
         return $query_result;
+
+    }
+
+    /*
+    jedna private fja da getujem zanrove, ulazim u
+     taksonomiju da uzmem sve te version id, onda ih stavljam u odredjen niz,
+    tj array, gde uzimam njihov id i name, i to sacuvam da bih koristio kasnije
+    */
+    private function getGenres() {
+
+        $vid = 'genre'; //Vocabulary ID to retrieve terms for.
+        $terms = $this->entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+        $term_data = [];
+        foreach ($terms as $term) {
+            $term_data[] = array(
+                'id' => $term->tid,
+                'name' => $term->name
+            );
+        }
+
+        return $term_data;
+    }
+    
+    /*
+    count broji sve filmove, getTotal(),  count izboriji filmove po uslovima, getTotal  rasporedi filmove od 0 do totala,
+    ako je broj filmova manji od 1 vrati to, inace zaokruzi ceil funkcija
+    */
+    private function getTotal($searchfield, $numberOfContentPerPage, $genre) {
+
+        $total_result = [];
+        
+        if(!empty($searchfield) && !empty($genre)) {
+            $total_result = $this->entityQuery->get('node')
+            ->condition('type', 'movies')
+            ->condition('title', $searchfield, 'CONTAINS')
+            ->condition('field_movie_genre', $genre) //da li u field genre da li postoji taj $genre
+            ->count() //For count queries, execute() returns the number entities found
+            ->execute();
+        }
+        else if(!empty($searchfield) && empty($genre)) {
+            $total_result = $this->entityQuery->get('node')
+            ->condition('type', 'movies')
+            ->condition('title', $searchfield, 'CONTAINS')
+            ->count()
+            ->execute();
+        }
+        else if(empty($searchfield) && !empty($genre)) {
+            $total_result = $this->entityQuery->get('node')
+            ->condition('type', 'movies')
+            ->condition('field_movie_genre', $genre)
+            ->count()
+            ->execute();
+        }
+        else {
+            $total_result = $this->entityQuery->get('node')
+            ->condition('type', 'movies')
+            ->count()
+            ->execute();
+        }
+
+        if(($total_result / $numberOfContentPerPage <= 1)) {
+            return $total_result / $numberOfContentPerPage;
+        }
+        else {
+            return ceil($total_result / $numberOfContentPerPage);
+        }
 
     }
 
